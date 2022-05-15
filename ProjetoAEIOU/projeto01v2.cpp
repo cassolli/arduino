@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h> //BLUETOOTH
 #include <Wire.h>           //RFID
 #include <SPI.h>            //RFID 
-#include <MFRC522.h>        //RFID
+#include <MFRC522.h>        //RFID, precisou ativar na IDE em tools>Library
 
 #define SS_PIN 53 //pino sda rfid
 #define RST_PIN 5 //pino reset rfid
