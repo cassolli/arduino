@@ -1,39 +1,101 @@
-#include <Wire.h> //INCLUSÃO DA BIBLIOTECA NECESSÁRIA
-#include <SPI.h> //INCLUSÃO DE BIBLIOTECA
-#include <MFRC522.h> //INCLUSÃO DE BIBLIOTECA
+#include <SoftwareSerial.h> //BLUETOOTH
+#include <Wire.h>           //RFID
+#include <SPI.h>            //RFID 
+#include <MFRC522.h>        //RFID
+
+#define SS_PIN 53 //pino sda rfid
+#define RST_PIN 5 //pino reset rfid
  
-#define SS_PIN 10 //PINO SDA
-#define RST_PIN 9 //PINO DE RESET
- 
-MFRC522 rfid(SS_PIN, RST_PIN); //PASSAGEM DE PARÂMETROS REFERENTE AOS PINOS
- 
- 
-const int pinoLedVerde = 3; //PINO DIGITAL REFERENTE AO LED VERDE
-const int pinoLedVermelho = 2; //PINO DIGITAL REFERENTE AO LED VERMELHO
- 
-void setup(){
- 
-  Wire.begin(); //INICIALIZA A BIBLIOTECA WIRE
-  SPI.begin(); //INICIALIZA O BARRAMENTO SPI
-  rfid.PCD_Init(); //INICIALIZA MFRC522
-  
-  pinMode(pinoLedVerde, OUTPUT); //DEFINE O PINO COMO SAÍDA
-  pinMode(pinoLedVermelho, OUTPUT); //DEFINE O PINO COMO SAÍDA
-  
-  digitalWrite(pinoLedVerde, LOW); //LED INICIA DESLIGADO
-  digitalWrite(pinoLedVermelho, LOW); //LED INICIA DESLIGADO
+MFRC522 rfid(SS_PIN, RST_PIN); //Passagem pinos para a biblioteca             
+
+SoftwareSerial bluetooth(10, 11); // RX, TX ## Ligação invetida
+int pinPortas[4] = {8,9,12,13};   //Array de leds
+String textoRecebido = "";        //String para tratar/criar os texto de comunicacao do bluetooth/serial arduino
+unsigned long delay1 = 0;         //Medida de tempo para delays
+char caracter;                    //Variavel para armazenar cada caractere recebido na serial
+
+void setup() {
+  //RFID
+  Wire.begin(); 
+  SPI.begin();
+  rfid.PCD_Init();
+  //Comunicacao bluetooth
+  bluetooth.begin(9600);
+  Serial.begin(9600);
+  //Leds
+  for(int i=0; i<4; i++){
+    pinMode(pinPortas[i], OUTPUT);
+  }
 }
- 
-void loop() {
-  leituraRfid(); //CHAMA A FUNÇÃO RESPONSÁVEL PELA VALIDAÇÃO DA TAG RFID
+
+void manipulaLed(int led){
+    for(int i=0; i < 4; i++){
+        if(i == led){
+            digitalWrite(pinPortas[i], HIGH);
+        }
+        else{
+            digitalWrite(pinPortas[i], LOW);
+        }
+    }
+  
+  if(led == 2){
+    delay(1000);
+    digitalWrite(pinPortas[3], HIGH);
+    delay(2000);
+    digitalWrite(pinPortas[3], LOW);
+  }
+
+  if(led == 3){
+    delay(1000);
+    digitalWrite(pinPortas[2], HIGH);
+    delay(2000);
+    digitalWrite(pinPortas[2], LOW);
+  }
 }
- 
-//FUNÇÃO DE VALIDAÇÃO DA TAG RFID
+
+void enviaMaster(){
+  if (Serial.available()) {
+    caracter = Serial.read();
+    textoRecebido += caracter;
+    delay1 = millis();
+  }
+
+  if (((millis() - delay1) > 10) && (textoRecebido != "")) {
+     bluetooth.print(textoRecebido);
+     textoRecebido = "";
+  }
+}
+
+void enviaSlave(){
+    if (bluetooth.available()) {
+        caracter = bluetooth.read();
+        caracter = toupper(caracter);
+        manipulaLed(9); //Para desligar todos os leds
+     
+        if(caracter == 'F'){
+            manipulaLed(0);
+        }
+     
+        if(caracter == 'T'){
+            manipulaLed(1);
+        }
+        
+        if(caracter == 'E'){
+            manipulaLed(2);
+        }
+        
+        if(caracter == 'D'){
+            manipulaLed(3);
+        }
+        
+        Serial.print(caracter);  
+    }
+}
+
 void leituraRfid(){
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) //VERIFICA SE O CARTÃO PRESENTE NO LEITOR É DIFERENTE DO ÚLTIMO CARTÃO LIDO. CASO NÃO SEJA, FAZ
-    return; //RETORNA PARA LER NOVAMENTE
+  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial())
+    return;
  
-  /***INICIO BLOCO DE CÓDIGO RESPONSÁVEL POR GERAR A TAG RFID LIDA***/
   String strID = ""; 
   for (byte i = 0; i < 4; i++) {
     strID +=
@@ -42,19 +104,20 @@ void leituraRfid(){
     (i!=3 ? ":" : "");
   }
   strID.toUpperCase();
-/***FIM DO BLOCO DE CÓDIGO RESPONSÁVEL POR GERAR A TAG RFID LIDA***/
- 
-  //O ENDEREÇO "27:41:AA:AB" DEVERÁ SER ALTERADO PARA O ENDEREÇO DA SUA TAG RFID QUE CAPTUROU ANTERIORMENTE
-  if (strID.indexOf("27:41:AA:AB") >= 0) { //SE O ENDEREÇO DA TAG LIDA FOR IGUAL AO ENDEREÇO INFORMADO, FAZ
-    digitalWrite(pinoLedVerde, HIGH); //LIGA O LED VERDE
-    delay(3000); //INTERVALO DE 4 SEGUNDOS
-    digitalWrite(pinoLedVerde, LOW); //DESLIGA O LED VERDE
-  }else{ //SENÃO, FAZ (CASO A TAG LIDA NÃO SEJÁ VÁLIDA)
-    digitalWrite(pinoLedVermelho, HIGH); //LIGA O LED VERMELHO
-    delay(3000); ////INTERVALO DE 6 SEGUNDOS
-    digitalWrite(pinoLedVermelho, LOW); //DESLIGA O LED VERDE
+  if (strID.indexOf("01:4F:77:89") >= 0) {
+      manipulaLed(0);
+      bluetooth.write("ANDANDO PARA FRENTE\n");  
+  }else{ 
+      manipulaLed(1);
+      bluetooth.write("ANDANDO PARA TRAS\n");  
   }
- 
-  rfid.PICC_HaltA(); //PARADA DA LEITURA DO CARTÃO
-  rfid.PCD_StopCrypto1(); //PARADA DA CRIPTOGRAFIA NO PCD
+  rfid.PICC_HaltA(); //Parar de ler o cartao
+  rfid.PCD_StopCrypto1(); //parada da criptografia no pcd
   }
+
+
+void loop() {
+  leituraRfid();
+  enviaMaster();
+  enviaSlave();
+}
