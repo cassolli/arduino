@@ -8,7 +8,7 @@
  * @format
  */
 
-import React from 'react';
+import React, {useState} from 'react';
 import {
   Button,
   SafeAreaView,
@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
 import {ClassicBluetoothService} from './common/application/classic-bluetooth.service';
+import {Device} from './common/domain/device';
 
 const Section: React.FC<{
   title: string;
@@ -53,11 +54,17 @@ const Section: React.FC<{
 const bluetoothService = new ClassicBluetoothService();
 
 const App = () => {
+  // useEffect(() => {
+  //   bluetoothService.init();
+  // });
+
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
+
+  const [listDevices, setListDevices] = useState<Device[]>([]);
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -71,11 +78,35 @@ const App = () => {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-          <Section title="Listar dispositivos">
+          <Section title="">
             <Button
-              title="Carregar"
-              onPress={() => bluetoothService.showDevices()}
+              title="Carregar dispositivos"
+              onPress={async () =>
+                setListDevices(await bluetoothService.getDevices())
+              }
             />
+
+            <Button
+              title="Carregar dispositivos conectados"
+              onPress={async () =>
+                setListDevices(await bluetoothService.getConnectedDevices())
+              }
+            />
+          </Section>
+
+          <Section title="Listar dispositivos">
+            <ScrollView>
+              {listDevices.map((device, index) => (
+                <View style={styles.deviceItem} key={index}>
+                  <Text>{`Nome: ${device.name}`}</Text>
+                  <Text>{`ID: ${device.id}`}</Text>
+                  <Text>{`Endereço: ${device.address}`}</Text>
+                  <Text>{`Vinculado: ${
+                    device.bonded ? 'TRUE' : 'FALSE'
+                  }`}</Text>
+                </View>
+              ))}
+            </ScrollView>
           </Section>
         </View>
       </ScrollView>
@@ -84,6 +115,11 @@ const App = () => {
 };
 
 const styles = StyleSheet.create({
+  deviceItem: {
+    marginHorizontal: 8,
+    marginVertical: 16,
+    paddingHorizontal: 8,
+  },
   sectionContainer: {
     marginTop: 32,
     paddingHorizontal: 24,
