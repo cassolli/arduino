@@ -2,8 +2,8 @@ import RNBluetoothClassic, {
   BluetoothDevice,
 } from 'react-native-bluetooth-classic';
 import {log} from '../../lib/log';
-import {Device} from '../domain/device';
 import {BluetoothService} from '../domain/bluetooth.service';
+import {Device} from '../domain/device';
 
 //https://kenjdavidson.com/react-native-bluetooth-classic/
 export class ClassicBluetoothService implements BluetoothService {
@@ -24,19 +24,19 @@ export class ClassicBluetoothService implements BluetoothService {
     }
   }
 
-  public async getDevices(): Promise<Device[]> {
+  public async getDevices(): Promise<Device<BluetoothDevice>[]> {
     log.info('--getDevices');
-    log.info(await RNBluetoothClassic.getBondedDevices());
+    log.info(this.toDomain(await RNBluetoothClassic.getBondedDevices()));
     return this.toDomain(await RNBluetoothClassic.getBondedDevices());
   }
 
-  public async getConnectedDevices(): Promise<Device[]> {
+  public async getConnectedDevices(): Promise<Device<BluetoothDevice>[]> {
     log.info('--getConnectedDevices');
-    log.info(await RNBluetoothClassic.getConnectedDevices());
+    log.info(this.toDomain(await RNBluetoothClassic.getConnectedDevices()));
     return this.toDomain(await RNBluetoothClassic.getConnectedDevices());
   }
 
-  private toDomain(list: BluetoothDevice[]): Device[] {
+  private toDomain(list: BluetoothDevice[]): Device<BluetoothDevice>[] {
     return list.map(
       device =>
         new Device({
@@ -44,6 +44,7 @@ export class ClassicBluetoothService implements BluetoothService {
           bonded: device?.bonded?.valueOf() ?? false,
           id: device.id,
           name: device.name,
+          origem: device,
         }),
     );
   }

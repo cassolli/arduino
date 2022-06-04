@@ -5705,6 +5705,11 @@ react-is@^16.13.1:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
+react-native-ble-manager@^8.1.0:
+  version "8.1.0"
+  resolved "https://registry.yarnpkg.com/react-native-ble-manager/-/react-native-ble-manager-8.1.0.tgz#e4a3a733f22257643efa5f4a01a2708ceaae6d9c"
+  integrity sha512-ikQsrGJ5D109a9ZpodGJW1bdIc5QOXBJSJHzL2rq+dNOZj0j8pm+b3F4TWvggABhbnDsZ0MJJ/VB+09rs5/NRA==
+
 react-native-bluetooth-classic@^1.60.0-rc.21:
   version "1.60.0-rc.21"
   resolved "https://registry.yarnpkg.com/react-native-bluetooth-classic/-/react-native-bluetooth-classic-1.60.0-rc.21.tgz#9217a29b998724139cbee927391d6501b8dbd2f1"

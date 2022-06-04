@@ -8,7 +8,7 @@
  * @format
  */
 
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   Button,
   SafeAreaView,
@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
+import {BLEManagerBluetoothService} from './common/application/ble-manager-bluetooth.service';
 import {ClassicBluetoothService} from './common/application/classic-bluetooth.service';
 import {Device} from './common/domain/device';
 
@@ -51,12 +52,14 @@ const Section: React.FC<{
   );
 };
 
-const bluetoothService = new ClassicBluetoothService();
+const classicBluetoothService = new ClassicBluetoothService();
+const bleManagerBluetoothService = new BLEManagerBluetoothService();
 
 const App = () => {
-  // useEffect(() => {
-  //   bluetoothService.init();
-  // });
+  useEffect(() => {
+    // bluetoothService.init();
+    bleManagerBluetoothService.init();
+  });
 
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -72,24 +75,46 @@ const App = () => {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
-        <Header />
+        {/* <Header /> */}
 
         <View
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-          <Section title="">
+          <Section title="Classic">
             <Button
               title="Carregar dispositivos"
               onPress={async () =>
-                setListDevices(await bluetoothService.getDevices())
+                setListDevices(await classicBluetoothService.getDevices())
               }
             />
 
             <Button
               title="Carregar dispositivos conectados"
               onPress={async () =>
-                setListDevices(await bluetoothService.getConnectedDevices())
+                setListDevices(
+                  await classicBluetoothService.getConnectedDevices(),
+                )
+              }
+            />
+          </Section>
+
+          <Section title="BLE">
+            <Button
+              title="Carregar dispositivos"
+              color={'green'}
+              onPress={async () =>
+                setListDevices(await bleManagerBluetoothService.getDevices())
+              }
+            />
+
+            <Button
+              title="Carregar dispositivos conectados"
+              color={'green'}
+              onPress={async () =>
+                setListDevices(
+                  await bleManagerBluetoothService.getConnectedDevices(),
+                )
               }
             />
           </Section>
