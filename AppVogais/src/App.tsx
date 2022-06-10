@@ -16,13 +16,21 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useColorScheme,
   View,
 } from 'react-native';
-import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
+import {Peripheral} from 'react-native-ble-manager';
+import {BluetoothDevice} from 'react-native-bluetooth-classic';
+import BluetoothSerial, {
+  AndroidBluetoothDevice,
+} from 'react-native-bluetooth-serial-next';
+import {Colors} from 'react-native/Libraries/NewAppScreen';
 import {BLEManagerBluetoothService} from './common/application/ble-manager-bluetooth.service';
 import {ClassicBluetoothService} from './common/application/classic-bluetooth.service';
+import {SerialBluetoothService} from './common/application/serial-bluetooth.service';
 import {Device} from './common/domain/device';
+import {log} from './lib/log';
 
 const Section: React.FC<{
   title: string;
@@ -54,12 +62,25 @@ const Section: React.FC<{
 
 const classicBluetoothService = new ClassicBluetoothService();
 const bleManagerBluetoothService = new BLEManagerBluetoothService();
+const serialBluetoothService = new SerialBluetoothService();
+
+enum LIBS {
+  CLASSIC,
+  BLE,
+  SERIAL,
+}
 
 const App = () => {
   useEffect(() => {
-    // bluetoothService.init();
+    classicBluetoothService.init();
     bleManagerBluetoothService.init();
-  });
+
+    classicBluetoothService.onDeviceConnected();
+    bleManagerBluetoothService.onDeviceConnected();
+
+    log.info('--BluetoothSerial');
+    log.debug(BluetoothSerial);
+  }, []);
 
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -67,7 +88,32 @@ const App = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  const [listDevices, setListDevices] = useState<Device[]>([]);
+  const [currentLib, setCurrentLib] = useState(LIBS.CLASSIC);
+
+  const [listDevices, setListDevices] = useState<
+    Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>[]
+  >([]);
+
+  const onPress = (
+    device: Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>,
+  ) => {
+    log.info('--onPress device');
+    log.debug(device);
+
+    switch (currentLib) {
+      case LIBS.BLE:
+        bleManagerBluetoothService.connect(device as Device<Peripheral>);
+        break;
+      case LIBS.SERIAL:
+        serialBluetoothService.connect(
+          device as Device<AndroidBluetoothDevice>,
+        );
+        break;
+      default:
+        classicBluetoothService.connect(device as Device<BluetoothDevice>);
+        break;
+    }
+  };
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -84,18 +130,22 @@ const App = () => {
           <Section title="Classic">
             <Button
               title="Carregar dispositivos"
-              onPress={async () =>
-                setListDevices(await classicBluetoothService.getDevices())
-              }
+              onPress={async () => {
+                setCurrentLib(LIBS.CLASSIC);
+
+                setListDevices(await classicBluetoothService.getDevices());
+              }}
             />
 
             <Button
               title="Carregar dispositivos conectados"
-              onPress={async () =>
+              onPress={async () => {
+                setCurrentLib(LIBS.CLASSIC);
+
                 setListDevices(
                   await classicBluetoothService.getConnectedDevices(),
-                )
-              }
+                );
+              }}
             />
           </Section>
 
@@ -103,33 +153,63 @@ const App = () => {
             <Button
               title="Carregar dispositivos"
               color={'green'}
-              onPress={async () =>
-                setListDevices(await bleManagerBluetoothService.getDevices())
-              }
+              onPress={async () => {
+                setCurrentLib(LIBS.BLE);
+
+                setListDevices(await bleManagerBluetoothService.getDevices());
+              }}
             />
 
             <Button
               title="Carregar dispositivos conectados"
               color={'green'}
-              onPress={async () =>
+              onPress={async () => {
+                setCurrentLib(LIBS.BLE);
+
                 setListDevices(
                   await bleManagerBluetoothService.getConnectedDevices(),
-                )
-              }
+                );
+              }}
+            />
+          </Section>
+
+          <Section title="Serial">
+            <Button
+              title="Carregar dispositivos"
+              color={'green'}
+              onPress={async () => {
+                setCurrentLib(LIBS.SERIAL);
+
+                setListDevices(await serialBluetoothService.getDevices());
+              }}
+            />
+
+            <Button
+              title="Carregar dispositivos conectados"
+              color={'green'}
+              onPress={async () => {
+                setCurrentLib(LIBS.SERIAL);
+
+                setListDevices(
+                  await serialBluetoothService.getConnectedDevices(),
+                );
+              }}
             />
           </Section>
 
           <Section title="Listar dispositivos">
             <ScrollView>
               {listDevices.map((device, index) => (
-                <View style={styles.deviceItem} key={index}>
-                  <Text>{`Nome: ${device.name}`}</Text>
-                  <Text>{`ID: ${device.id}`}</Text>
-                  <Text>{`Endereço: ${device.address}`}</Text>
-                  <Text>{`Vinculado: ${
-                    device.bonded ? 'TRUE' : 'FALSE'
-                  }`}</Text>
-                </View>
+                <TouchableOpacity key={index} onPress={() => onPress(device)}>
+                  <View style={styles.deviceItem}>
+                    <Text>{`Nome: ${device.name}`}</Text>
+                    <Text>{`ID: ${device.id}`}</Text>
+                    <Text>{`Endereço: ${device.address}`}</Text>
+                    <Text>{`Vinculado: ${
+                      device.bonded ? 'TRUE' : 'FALSE'
+                    }`}</Text>
+                  </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </Section>

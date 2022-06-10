@@ -1,12 +1,17 @@
+import {Platform} from 'react-native';
 import RNBluetoothClassic, {
   BluetoothDevice,
+  BluetoothDeviceEvent,
+  BluetoothDeviceReadEvent,
 } from 'react-native-bluetooth-classic';
 import {log} from '../../lib/log';
 import {BluetoothService} from '../domain/bluetooth.service';
 import {Device} from '../domain/device';
 
 //https://kenjdavidson.com/react-native-bluetooth-classic/
-export class ClassicBluetoothService implements BluetoothService {
+export class ClassicBluetoothService
+  implements BluetoothService<BluetoothDevice>
+{
   protected enabledSubscription: any;
 
   public async init() {
@@ -14,12 +19,12 @@ export class ClassicBluetoothService implements BluetoothService {
       const available = await RNBluetoothClassic.isBluetoothAvailable();
       const enabled = await RNBluetoothClassic.isBluetoothEnabled();
 
-      log.info('--available');
+      log.info('--RNBluetoothClassic: available');
       log.debug(available);
-      log.info('--enabled');
+      log.info('--RNBluetoothClassic: enabled');
       log.debug(enabled);
     } catch (err) {
-      log.info('--OCORREU UM ERRO');
+      log.info('--RNBluetoothClassic: OCORREU UM ERRO');
       log.error(err);
     }
   }
@@ -34,6 +39,37 @@ export class ClassicBluetoothService implements BluetoothService {
     log.info('--getConnectedDevices');
     log.info(this.toDomain(await RNBluetoothClassic.getConnectedDevices()));
     return this.toDomain(await RNBluetoothClassic.getConnectedDevices());
+  }
+
+  public async onDeviceConnected(): Promise<void> {
+    RNBluetoothClassic.onDeviceConnected((event: BluetoothDeviceEvent) => {
+      log.info('--RNBluetoothClassic: onDeviceConnected');
+      log.info(event);
+    });
+  }
+
+  public async connect(device: Device<BluetoothDevice>): Promise<void> {
+    log.info('--RNBluetoothClassic: connect');
+
+    if (!device.origem.isConnected()) {
+      const success = await device.origem.connect({
+        connectorType: 'rfcomm',
+        delimiter: '\n',
+        charset: Platform.OS === 'ios' ? 1536 : 'utf-8',
+      });
+
+      log.debug(success);
+    }
+
+    await this.read(device);
+  }
+
+  private async read(device: Device<BluetoothDevice>): Promise<void> {
+    log.info('--RNBluetoothClassic: read');
+    device.origem.onDataReceived((event: BluetoothDeviceReadEvent) => {
+      log.info('--RNBluetoothClassic: was read');
+      log.info(event);
+    });
   }
 
   private toDomain(list: BluetoothDevice[]): Device<BluetoothDevice>[] {

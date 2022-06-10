@@ -1,10 +1,16 @@
+import {NativeEventEmitter, NativeModules} from 'react-native';
 import BleManager, {Peripheral} from 'react-native-ble-manager';
 import {log} from '../../lib/log';
 import {BluetoothService} from '../domain/bluetooth.service';
 import {Device} from '../domain/device';
 
+const BleManagerModule = NativeModules.BleManager;
+const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
+
 //https://kenjdavidson.com/react-native-bluetooth-classic/
-export class BLEManagerBluetoothService implements BluetoothService {
+export class BLEManagerBluetoothService
+  implements BluetoothService<Peripheral>
+{
   protected enabledSubscription: any;
 
   public async init() {
@@ -41,6 +47,34 @@ export class BLEManagerBluetoothService implements BluetoothService {
     log.info(devices);
 
     return devices;
+  }
+
+  public async onDeviceConnected(): Promise<void> {
+    bleManagerEmitter.addListener(
+      'BleManagerConnectPeripheral',
+      (event: any) => {
+        log.info('--BLE: onDeviceConnected');
+        log.info(event);
+      },
+    );
+  }
+
+  public async connect(device: Device<Peripheral>): Promise<void> {
+    await BleManager.connect(device.id);
+
+    BleManager.retrieveServices(device.id).then(peripheralInfo => {
+      log.info('--BLE: retrieveServices');
+      log.debug(peripheralInfo);
+    });
+
+    await this.read(device);
+  }
+
+  private async read(device: Device<Peripheral>): Promise<void> {
+    log.info('--BLE: read');
+    const rssi = BleManager.readRSSI(device.id);
+
+    log.debug(rssi);
   }
 
   private toDomain(list: Peripheral[]): Device<Peripheral>[] {
