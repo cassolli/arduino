@@ -51,11 +51,36 @@ export class SerialBluetoothService
     await this.read(device);
   }
 
+  public async disconnect(
+    device: Device<AndroidBluetoothDevice>,
+  ): Promise<void> {
+    log.info('--SerialBluetoothService: disconnect');
+
+    await BluetoothSerial.disconnect(device.id);
+  }
+
   private async read(device: Device<AndroidBluetoothDevice>): Promise<void> {
     log.info('--SerialBluetoothService: read');
 
+    const resWithDelimiter = await BluetoothSerial.withDelimiter(
+      '\n',
+      device.id,
+    );
+    log.info('--SerialBluetoothService: resWithDelimiter');
+    log.debug(resWithDelimiter);
+
     BluetoothSerial.on(
       'read',
+      (data: string, subscription: EmitterSubscription) => {
+        log.info('--SerialBluetoothService: onRead');
+
+        log.debug(data);
+        log.debug(subscription);
+      },
+    );
+
+    BluetoothSerial.on(
+      'connectionLost',
       (data: string, subscription: EmitterSubscription) => {
         log.info('--SerialBluetoothService: onRead');
 

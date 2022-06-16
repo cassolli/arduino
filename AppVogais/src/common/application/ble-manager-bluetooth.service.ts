@@ -53,8 +53,21 @@ export class BLEManagerBluetoothService
     bleManagerEmitter.addListener(
       'BleManagerConnectPeripheral',
       (event: any) => {
-        log.info('--BLE: onDeviceConnected');
+        log.info('--BLE: BleManagerConnectPeripheral');
         log.info(event);
+      },
+    );
+
+    bleManagerEmitter.addListener('read', (event: any) => {
+      log.info('--BLE: read');
+      log.info(event);
+    });
+
+    bleManagerEmitter.addListener(
+      'BleManagerDisconnectPeripheral',
+      (event: any) => {
+        log.info('--BLE: BleManagerDisconnectPeripheral');
+        log.debug(event);
       },
     );
   }
@@ -62,12 +75,40 @@ export class BLEManagerBluetoothService
   public async connect(device: Device<Peripheral>): Promise<void> {
     await BleManager.connect(device.id);
 
-    BleManager.retrieveServices(device.id).then(peripheralInfo => {
-      log.info('--BLE: retrieveServices');
-      log.debug(peripheralInfo);
-    });
+    this.onDeviceConnected();
+
+    const peripheralInfo = await BleManager.retrieveServices(device.id);
+    log.info('--BLE: retrieveServices');
+    log.debug(peripheralInfo);
+
+    await Promise.all(
+      (peripheralInfo.characteristics ?? []).map(async characteristic => {
+        log.info('--BLE: startNotification');
+        log.debug(characteristic);
+
+        await BleManager.startNotification(
+          device.id,
+          characteristic.service,
+          characteristic.characteristic,
+        );
+
+        bleManagerEmitter.addListener(
+          'BleManagerDidUpdateValueForCharacteristic',
+          event => {
+            log.info('--BLE: BleManagerDidUpdateValueForCharacteristic');
+            log.debug(event);
+            log.debug(Buffer.from(event?.value));
+            log.debug(Buffer.from(event?.value).toString());
+          },
+        );
+      }),
+    );
 
     await this.read(device);
+  }
+
+  public async disconnect(device: Device<Peripheral>): Promise<void> {
+    await BleManager.disconnect(device.id);
   }
 
   private async read(device: Device<Peripheral>): Promise<void> {

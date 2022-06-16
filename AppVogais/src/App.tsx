@@ -16,6 +16,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  ToastAndroid,
   TouchableOpacity,
   useColorScheme,
   View,
@@ -113,6 +114,31 @@ const App = () => {
         classicBluetoothService.connect(device as Device<BluetoothDevice>);
         break;
     }
+
+    ToastAndroid.show(`CONNECTED: ${device.id}`, ToastAndroid.SHORT);
+  };
+
+  const onLongPress = (
+    device: Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>,
+  ) => {
+    log.info('--onLongPress device');
+    log.debug(device);
+
+    switch (currentLib) {
+      case LIBS.BLE:
+        bleManagerBluetoothService.disconnect(device as Device<Peripheral>);
+        break;
+      case LIBS.SERIAL:
+        serialBluetoothService.disconnect(
+          device as Device<AndroidBluetoothDevice>,
+        );
+        break;
+      default:
+        // classicBluetoothService.disconnect(device as Device<BluetoothDevice>);
+        break;
+    }
+
+    ToastAndroid.show(`DISCONNECTED: ${device.id}`, ToastAndroid.SHORT);
   };
 
   return (
@@ -200,7 +226,10 @@ const App = () => {
           <Section title="Listar dispositivos">
             <ScrollView>
               {listDevices.map((device, index) => (
-                <TouchableOpacity key={index} onPress={() => onPress(device)}>
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => onPress(device)}
+                  onLongPress={() => onLongPress(device)}>
                   <View style={styles.deviceItem}>
                     <Text>{`Nome: ${device.name}`}</Text>
                     <Text>{`ID: ${device.id}`}</Text>
