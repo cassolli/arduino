@@ -4,15 +4,28 @@
 #include <MFRC522.h>        //RFID, precisou ativar na IDE em tools>Library
 
 #define SS_PIN 53 // pino sda rfid
-#define RST_PIN 5 // pino reset rfid
+#define RST_PIN 2 // pino reset rfid
 
 const int VELOCIDADE = 9600;
-int PIN_LEDS[4] = {8, 9, 12, 13}; // Array de leds
 MFRC522 RFID(SS_PIN, RST_PIN);    // Passagem pinos para a biblioteca
 SoftwareSerial BLUETOOTH(10, 11); // RX, TX ## Ligação invetida
 
 String texto_recebido = "";              // String para tratar/criar os texto de comunicacao do bluetooth/serial arduino
 unsigned long tempo_ultimo_caracter = 0; // Medida de tempo para delays
+
+//movimentação
+#define dirFrente 4
+#define dirTras   3
+#define esqFrente 9
+#define esqTras   6
+
+// DEFINIÇÕES
+#define FRENTE 1
+#define PARADO 0
+#define TRAS  -1
+
+#define velocidadeE 200
+#define velocidadeD 210
 
 void setup()
 {
@@ -23,43 +36,21 @@ void setup()
   // Comunicacao bluetooth
   BLUETOOTH.begin(VELOCIDADE);
   Serial.begin(VELOCIDADE);
+    // CONFIGURAÇÃO DOS PINOS DA PONTE-H
+  pinMode(dirFrente, OUTPUT);
+  pinMode(dirTras,   OUTPUT);
+  pinMode(esqFrente, OUTPUT);
+  pinMode(esqTras,   OUTPUT);
 
-  // Leds
-  for (int i = 0; i < 4; i++)
-  {
-    pinMode(PIN_LEDS[i], OUTPUT);
-  }
+  // DEIXANDO OS MOTORES PARADOS
+  digitalWrite(dirFrente, LOW);
+  digitalWrite(dirTras,   LOW);
+  digitalWrite(esqFrente, LOW);
+  digitalWrite(esqTras,   LOW);
+
 }
 
-void manipulaLeds(int led = -1)
-{
-  if (led == -1)
-    return;
-
-  for (int i = 0; i < 4; i++)
-  {
-    digitalWrite(PIN_LEDS[i], led == i ? HIGH : LOW);
-  }
-
-  switch (led)
-  {
-  case 2:
-    delay(1000);
-    digitalWrite(PIN_LEDS[3], HIGH);
-    delay(2000);
-    digitalWrite(PIN_LEDS[3], LOW);
-    break;
-
-  case 3:
-    delay(1000);
-    digitalWrite(PIN_LEDS[2], HIGH);
-    delay(2000);
-    digitalWrite(PIN_LEDS[2], LOW);
-    break;
-  }
-}
-
-void enviaMaster()
+void enviaCelular()
 {
   if (!Serial.available())
     return;
@@ -76,32 +67,56 @@ void enviaMaster()
   tempo_ultimo_caracter = tempo_caracter_atual;
 }
 
-void enviaSlave()
+void enviaRobo()
 {
   if (!BLUETOOTH.available())
     return;
 
   char caracter = BLUETOOTH.read();
 
-  manipulaLeds();
+  if (toupper(caracter) == 'F') { // ANDAR PRA FRENTE
+    // MOTOR DIREITO PARA FRENTE
+    analogWrite(dirFrente,  velocidadeD);
+    analogWrite(dirTras,    LOW);
 
-  switch (toupper(caracter))
-  {
-  case 'F':
-    manipulaLeds(0);
-    break;
-  case 'T':
-    manipulaLeds(1);
-    break;
+    // MOTOR ESQUERDO PARA FRENTE
+    analogWrite(esqFrente,  velocidadeE);
+    analogWrite(esqTras,    LOW);
 
-  case 'E':
-    manipulaLeds(2);
-    break;
+  } else if (toupper(caracter) == 'D') { // VIRAR PRA DIREITA
+    // MOTOR DIREITO PARA TRAS
+    analogWrite(dirFrente,  LOW);
+    analogWrite(dirTras,    velocidadeD);
 
-  case 'D':
-    manipulaLeds(3);
-    break;
+    // MOTOR ESQUERDO PARA FRENTE
+    analogWrite(esqFrente,  velocidadeE);
+    analogWrite(esqTras,    LOW);
+
+  } else if (toupper(caracter) == 'E') { // VIRAR PRA ESQUERDA
+    // MOTOR DIREITO PARA FRENTE
+    analogWrite(dirFrente,  velocidadeD);
+    analogWrite(dirTras,    LOW);
+
+    // MOTOR ESQUERDO PARA TRAS
+    analogWrite(esqFrente,  LOW);
+    analogWrite(esqTras,    velocidadeE);
+
+  } else if (toupper(caracter) == 'T') { // ANDAR PRA TRAS
+    // MOTOR DIREITO PARA TRAS
+    analogWrite(dirFrente,  LOW);
+    analogWrite(dirTras,    velocidadeE);
+
+    // MOTOR ESQUERDO PARA TRAS
+    analogWrite(esqFrente,  LOW);
+    analogWrite(esqTras,    velocidadeD);
+
+  } else { // FICAR PARADO
+    digitalWrite(dirFrente, LOW);
+    digitalWrite(dirTras,   LOW);
+    digitalWrite(esqFrente, LOW);
+    digitalWrite(esqTras,   LOW);
   }
+
 
   Serial.print(caracter);
 }
@@ -122,13 +137,22 @@ void leituraRFID()
 
   if (id_dispositivo.indexOf("01:4F:77:89") >= 0)
   {
-    manipulaLeds(0);
-    BLUETOOTH.write("ANDANDO PARA FRENTE\n");
-  }
-  else
+    BLUETOOTH.write("ACHEI A\n");
+  } else if (id_dispositivo.indexOf("43:81:5C:A") >= 0)
   {
-    manipulaLeds(1);
-    BLUETOOTH.write("ANDANDO PARA TRAS\n");
+    BLUETOOTH.write("ACHEI E\n");
+  }else if (id_dispositivo.indexOf("33:A2:CC:06") >= 0)
+  {
+    BLUETOOTH.write("ACHEI I\n");
+  }else if (id_dispositivo.indexOf("49:E7:7D:39") >= 0)
+  {
+    BLUETOOTH.write("ACHEI O\n");
+  }else if (id_dispositivo.indexOf("A3:C7:4B:A7") >= 0)
+  {
+    BLUETOOTH.write("ACHEI U\n");
+  }else
+  {
+    BLUETOOTH.write("CARTÃO NÃO CADASTRADO\n");
   }
 
   RFID.PICC_HaltA();      // Parar de ler o cartao
@@ -138,6 +162,6 @@ void leituraRFID()
 void loop()
 {
   leituraRFID();
-  enviaMaster();
-  enviaSlave();
+  enviaCelular();
+  enviaRobo();
 }
