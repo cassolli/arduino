@@ -38,7 +38,7 @@ void manipulaLeds(int led = -1)
 
   for (int i = 0; i < 4; i++)
   {
-    digitalWrite(PIN_LEDS[i], led == i ? HIGH : LOW)
+    digitalWrite(PIN_LEDS[i], led == i ? HIGH : LOW);
   }
 
   switch (led)
