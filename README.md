@@ -23,7 +23,7 @@ Objetivo: <b>"Auxiliar no processo de alfabetização de crianças em séries in
  
   ## Alunos
 
-| [<img src="https://user-images.githubusercontent.com/22844327/175749090-056ab48d-37e1-4f50-8d45-6675a83406b8.png" width=115><br><sub>Diego Cassolli dos Santos</sub>](https://github.com/cassolli) |  [<img src="https://avatars.githubusercontent.com/u/10423927?v=4" width=115><br><sub>Gabriel dos Santos carvalho</sub>](https://github.com/gabrieldosscarvalho) |  
+| [<img src="https://user-images.githubusercontent.com/22844327/175749090-056ab48d-37e1-4f50-8d45-6675a83406b8.png" width=115><br><sub>Diego Cassolli dos Santos</sub>](https://github.com/cassolli) |  [<img src="https://avatars.githubusercontent.com/u/10423927?v=4" width=115><br><sub>Gabriel Carvalho</sub>](https://github.com/gabrieldosscarvalho) |  
 | :---: | :---: | 
   
   ## Professor
