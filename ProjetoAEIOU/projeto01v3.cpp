@@ -4,7 +4,7 @@
 #include <MFRC522.h>        //RFID, precisou ativar na IDE em tools>Library
 
 #define SS_PIN 53 // pino sda rfid
-#define RST_PIN 2 // pino reset rfid
+#define RST_PIN 47 // pino reset rfid
 
 const int VELOCIDADE = 9600;
 MFRC522 RFID(SS_PIN, RST_PIN);    // Passagem pinos para a biblioteca
@@ -14,10 +14,10 @@ String texto_recebido = "";              // String para tratar/criar os texto de
 unsigned long tempo_ultimo_caracter = 0; // Medida de tempo para delays
 
 //movimentação
-#define dirFrente 4
-#define dirTras   3
+#define dirFrente 13
+#define dirTras   12
 #define esqFrente 9
-#define esqTras   6
+#define esqTras   8
 
 // DEFINIÇÕES
 #define FRENTE 1
