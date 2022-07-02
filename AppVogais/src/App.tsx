@@ -31,6 +31,7 @@ import {BLEManagerBluetoothService} from './common/application/ble-manager-bluet
 import {ClassicBluetoothService} from './common/application/classic-bluetooth.service';
 import {SerialBluetoothService} from './common/application/serial-bluetooth.service';
 import {Device} from './common/domain/device';
+import Home from './Home';
 import {log} from './lib/log';
 
 const Section: React.FC<{
@@ -144,6 +145,9 @@ const App = () => {
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+
+      <Home />
+
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
