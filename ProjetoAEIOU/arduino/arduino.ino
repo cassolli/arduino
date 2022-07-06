@@ -2,6 +2,7 @@
 #include <Wire.h>            //RFID
 #include <SPI.h>             //RFID
 #include <MFRC522.h>         //RFID, precisou ativar na IDE em tools>Library
+#include<string.h>
 
 const int ARDUINO_VELOCIDADE = 9600;       // Velocidade de operação arduino
 const int RFID_CHIP_SELECT_PIN = 53;       // RFID pino sda
@@ -14,8 +15,8 @@ const int DIRECAO_FRENTE_ESQUERDA_PIN = 9;
 const int DIRECAO_TRAS_DIREITA_PIN = 12;
 const int DIRECAO_TRAS_ESQUERDA_PIN = 8;
 
-const int VELOCIDADE_RODA_ESQUERDA = 180; // MAX 255
-const int VELOCIDADE_RODA_DIREITA = 180; // MAX 255
+const int VELOCIDADE_RODA_ESQUERDA = 180;  // MAX 255
+const int VELOCIDADE_RODA_DIREITA = 180;   // MAX 255
 
 MFRC522 RFID(RFID_CHIP_SELECT_PIN, RFID_RESET_POWER_DOWN_PIN);  // Passagem pinos para a biblioteca
 SoftwareSerial BLUETOOTH(BLUETOOTH_RX_PIN, BLUETOOTH_TX_PIN);   // RX, TX ## Ligação invetida
@@ -81,6 +82,12 @@ void lerBluetooth() {
     return;
 
   char caracter = BLUETOOTH.read();
+
+  if (strcmp(caracter, '6') || caracter == 6 || caracter == '6') {
+    Serial.print("== PODE ESCREVER\n");
+    // BLUETOOTH.write("2");
+    BLUETOOTH.println("Teste 12");
+  }
 
   Serial.print("== CARACTER:  ");
   Serial.print(caracter);

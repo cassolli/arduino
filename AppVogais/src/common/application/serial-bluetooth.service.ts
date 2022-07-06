@@ -42,11 +42,16 @@ export class SerialBluetoothService
   public async connect(device: Device<AndroidBluetoothDevice>): Promise<void> {
     log.info('--SerialBluetoothService: connect');
 
-    if (!(await BluetoothSerial.isConnected(device.id))) {
-      const connectedDevice = await BluetoothSerial.connect(device.id);
-
-      log.debug(connectedDevice);
+    if (await BluetoothSerial.isConnected(device.id)) {
+      log.info('--SerialBluetoothService: JA ESTA CONECTADO');
+      return;
     }
+
+    log.info('--SerialBluetoothService: CONECTAR');
+
+    const connectedDevice = await BluetoothSerial.connect(device.id);
+
+    log.debug(connectedDevice);
 
     await this.read(device);
   }
@@ -59,15 +64,56 @@ export class SerialBluetoothService
     await BluetoothSerial.disconnect(device.id);
   }
 
+  public async write(
+    device: Device<AndroidBluetoothDevice>,
+    message: string,
+  ): Promise<void> {
+    log.info('--SerialBluetoothService: write');
+
+    // await BluetoothSerial.writeToDevice(message, device.id);
+    await BluetoothSerial.write(message, device.id);
+  }
+
   private async read(device: Device<AndroidBluetoothDevice>): Promise<void> {
     log.info('--SerialBluetoothService: read');
 
-    const resWithDelimiter = await BluetoothSerial.withDelimiter(
-      '\n',
+    // const resWithDelimiter = await BluetoothSerial.withDelimiter(
+    //   '\n',
+    //   device.id,
+    // );
+    // log.info('--SerialBluetoothService: resWithDelimiter');
+    // log.debug(resWithDelimiter);
+
+    log.info('--SerialBluetoothService: readFromDevice');
+    log.debug(await BluetoothSerial.readFromDevice());
+
+    await BluetoothSerial.read(
+      (data: string, subscription: EmitterSubscription) => {
+        log.info('--SerialBluetoothService: READ');
+
+        log.debug(data);
+        log.debug(subscription);
+      },
+      '',
       device.id,
     );
-    log.info('--SerialBluetoothService: resWithDelimiter');
-    log.debug(resWithDelimiter);
+
+    // await BluetoothSerial.readEvery(
+    //   (data: string, readEveryIntervalId: number) => {
+    //     log.info('--SerialBluetoothService: READ_EVERY');
+
+    //     log.debug(data);
+
+    //     BluetoothSerial.on(
+    //       'connectionLost',
+    //       (data: string, subscription: EmitterSubscription) => {
+    //         clearInterval(readEveryIntervalId);
+    //       },
+    //     );
+    //   },
+    //   500,
+    //   '',
+    // );
 
     BluetoothSerial.on(
       'read',
@@ -76,16 +122,48 @@ export class SerialBluetoothService
 
         log.debug(data);
         log.debug(subscription);
+        log.debug(BluetoothSerial.readFromDevice());
+      },
+    );
+
+    BluetoothSerial.on(
+      'connectionSuccess',
+      (data: string, subscription: EmitterSubscription) => {
+        log.info('--SerialBluetoothService: onConnectionSuccess ');
+
+        log.debug(data);
+        log.debug(subscription);
+      },
+    );
+    await BluetoothSerial.addListener(
+      'connectionSuccess',
+      (data: string, subscription: EmitterSubscription) => {
+        log.info('--SerialBluetoothService: addListenerConnectionSuccess ');
+
+        log.debug(data);
+        log.debug(subscription);
+
+        BluetoothSerial.addListener(
+          'read',
+          (data: string, subscription: EmitterSubscription) => {
+            log.info('--SerialBluetoothService: listener read');
+
+            log.debug(data);
+            log.debug(subscription);
+          },
+        );
       },
     );
 
     BluetoothSerial.on(
       'connectionLost',
       (data: string, subscription: EmitterSubscription) => {
-        log.info('--SerialBluetoothService: onRead');
+        log.info('--SerialBluetoothService: connectionLost');
 
         log.debug(data);
         log.debug(subscription);
+
+        BluetoothSerial.removeAllListeners();
       },
     );
 
@@ -97,17 +175,6 @@ export class SerialBluetoothService
         log.debug(data);
         log.debug(subscription);
       },
-    );
-
-    BluetoothSerial.read(
-      (data: string, subscription: EmitterSubscription) => {
-        log.info('--SerialBluetoothService: read');
-
-        log.debug(data);
-        log.debug(subscription);
-      },
-      '',
-      device.id,
     );
   }
 

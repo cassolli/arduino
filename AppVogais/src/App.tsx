@@ -96,6 +96,9 @@ const App = () => {
     Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>[]
   >([]);
 
+  const [currentDevice, setCurrentDevice] =
+    useState<Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>>();
+
   const onPress = (
     device: Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>,
   ) => {
@@ -115,6 +118,8 @@ const App = () => {
         classicBluetoothService.connect(device as Device<BluetoothDevice>);
         break;
     }
+
+    setCurrentDevice(device);
 
     ToastAndroid.show(`CONNECTED: ${device.id}`, ToastAndroid.SHORT);
   };
@@ -139,14 +144,40 @@ const App = () => {
         break;
     }
 
+    setCurrentDevice(undefined);
+
     ToastAndroid.show(`DISCONNECTED: ${device.id}`, ToastAndroid.SHORT);
+  };
+
+  const onPressSendMessage = async () => {
+    log.info('--onPress onPressSendMessage');
+    log.debug(currentDevice);
+
+    switch (currentLib) {
+      case LIBS.BLE:
+        bleManagerBluetoothService.connect(currentDevice as Device<Peripheral>);
+        break;
+      case LIBS.SERIAL:
+        await serialBluetoothService.write(
+          currentDevice as Device<AndroidBluetoothDevice>,
+          '6',
+        );
+        break;
+      default:
+        classicBluetoothService.connect(
+          currentDevice as Device<BluetoothDevice>,
+        );
+        break;
+    }
+
+    ToastAndroid.show(`SEND MESSAGE: ${currentDevice?.id}`, ToastAndroid.SHORT);
   };
 
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
-      <Home />
+      {/* <Home /> */}
 
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
@@ -224,6 +255,12 @@ const App = () => {
                   await serialBluetoothService.getConnectedDevices(),
                 );
               }}
+            />
+
+            <Button
+              title="Enviar comando"
+              color={'green'}
+              onPress={onPressSendMessage}
             />
           </Section>
 
