@@ -6,10 +6,136 @@ import {log} from '../../lib/log';
 import {BluetoothService} from '../domain/bluetooth.service';
 import {Device} from '../domain/device';
 
+type BluetoothSerialEventData = {
+  message: string;
+  device: AndroidBluetoothDevice;
+};
+
 //https://github.com/don/BluetoothSerial
 export class SerialBluetoothService
   implements BluetoothService<AndroidBluetoothDevice>
 {
+  connected: boolean = false;
+
+  public async init(): Promise<void> {
+    try {
+      const available = await BluetoothSerial.requestEnable();
+      const enabled = await BluetoothSerial.isEnabled();
+
+      log.info('--SerialBluetoothService: available');
+      log.debug(available);
+      log.info('--SerialBluetoothService: enabled');
+      log.debug(enabled);
+
+      BluetoothSerial.on(
+        'connectionSuccess',
+        (data: BluetoothSerialEventData) => {
+          BluetoothSerial.clear();
+
+          log.info('--SerialBluetoothService: onConnectionSuccess');
+
+          log.debug(data);
+
+          this.connected = true;
+
+          BluetoothSerial.on('read', (message: {id: string; data: string}) => {
+            log.info('--SerialBluetoothService: listener read from onSuccess');
+
+            log.debug(message);
+          });
+
+          BluetoothSerial.on('data', (message: {id: string; data: string}) => {
+            log.info('--SerialBluetoothService: listener data onSuccess');
+
+            log.debug(message);
+          });
+
+          BluetoothSerial.readEvery(
+            async (everyData: string, readEveryIntervalId: number) => {
+              log.info('--SerialBluetoothService: READ_EVERY');
+
+              log.debug(everyData);
+              log.debug(await BluetoothSerial.readFromDevice());
+
+              BluetoothSerial.on('connectionLost', () => {
+                clearInterval(readEveryIntervalId);
+              });
+            },
+            100,
+            '',
+          );
+        },
+      );
+
+      await BluetoothSerial.on(
+        'connectionFailed',
+        (data: BluetoothSerialEventData) => {
+          log.info('--SerialBluetoothService: connectionFailed');
+
+          log.debug(data);
+
+          this.connected = false;
+        },
+      );
+
+      await BluetoothSerial.addListener(
+        'connectionSuccess',
+        (data: BluetoothSerialEventData) => {
+          log.info('--SerialBluetoothService: addListenerConnectionSuccess');
+
+          log.debug(data);
+
+          BluetoothSerial.addListener(
+            'read',
+            (message: {id: string; data: string}) => {
+              log.info('--SerialBluetoothService: listener read');
+
+              log.debug(message);
+            },
+          );
+
+          BluetoothSerial.addListener(
+            'data',
+            (message: {id: string; data: string}) => {
+              log.info('--SerialBluetoothService: listener data');
+
+              log.debug(message);
+              log.debug(message);
+            },
+          );
+
+          this.connected = true;
+        },
+      );
+
+      await BluetoothSerial.on(
+        'connectionLost',
+        (data: BluetoothSerialEventData) => {
+          log.info('--SerialBluetoothService: connectionLost');
+
+          log.debug(data);
+
+          BluetoothSerial.removeAllListeners();
+
+          this.connected = false;
+        },
+      );
+
+      await BluetoothSerial.on('error', (error: any) => {
+        log.info('--SerialBluetoothService: connectionLost');
+
+        log.debug(error);
+
+        BluetoothSerial.removeAllListeners();
+
+        this.connected = false;
+      });
+    } catch (err) {
+      log.info('--SerialBluetoothService: OCORREU UM ERRO');
+      log.error(err);
+    }
+  }
+
   public async getDevices(): Promise<Device<AndroidBluetoothDevice>[]> {
     log.info('--SerialBluetoothService: getDevices');
 
@@ -62,6 +188,8 @@ export class SerialBluetoothService
     log.info('--SerialBluetoothService: disconnect');
 
     await BluetoothSerial.disconnect(device.id);
+
+    this.connected = false;
   }
 
   public async write(
@@ -72,6 +200,16 @@ export class SerialBluetoothService
 
     // await BluetoothSerial.writeToDevice(message, device.id);
     await BluetoothSerial.write(message, device.id);
+  }
+
+  public async send(
+    command: string,
+    device: Device<AndroidBluetoothDevice>,
+  ): Promise<void> {
+    log.info('--SerialBluetoothService: SEND');
+    log.debug(command);
+
+    await BluetoothSerial.write(command, device.id);
   }
 
   private async read(device: Device<AndroidBluetoothDevice>): Promise<void> {
@@ -123,57 +261,6 @@ export class SerialBluetoothService
         log.debug(data);
         log.debug(subscription);
         log.debug(BluetoothSerial.readFromDevice());
-      },
-    );
-
-    BluetoothSerial.on(
-      'connectionSuccess',
-      (data: string, subscription: EmitterSubscription) => {
-        log.info('--SerialBluetoothService: onConnectionSuccess ');
-
-        log.debug(data);
-        log.debug(subscription);
-      },
-    );
-    await BluetoothSerial.addListener(
-      'connectionSuccess',
-      (data: string, subscription: EmitterSubscription) => {
-        log.info('--SerialBluetoothService: addListenerConnectionSuccess ');
-
-        log.debug(data);
-        log.debug(subscription);
-
-        BluetoothSerial.addListener(
-          'read',
-          (data: string, subscription: EmitterSubscription) => {
-            log.info('--SerialBluetoothService: listener read');
-
-            log.debug(data);
-            log.debug(subscription);
-          },
-        );
-      },
-    );
-
-    BluetoothSerial.on(
-      'connectionLost',
-      (data: string, subscription: EmitterSubscription) => {
-        log.info('--SerialBluetoothService: connectionLost');
-
-        log.debug(data);
-        log.debug(subscription);
-
-        BluetoothSerial.removeAllListeners();
-      },
-    );
-
-    BluetoothSerial.addListener(
-      'read',
-      (data: string, subscription: EmitterSubscription) => {
-        log.info('--SerialBluetoothService: listener read');
-
-        log.debug(data);
-        log.debug(subscription);
       },
     );
   }

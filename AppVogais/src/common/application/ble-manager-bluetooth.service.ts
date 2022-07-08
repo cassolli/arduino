@@ -11,6 +11,7 @@ const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 export class BLEManagerBluetoothService
   implements BluetoothService<Peripheral>
 {
+  connected: boolean = false;
   protected enabledSubscription: any;
 
   public async init() {
@@ -109,6 +110,15 @@ export class BLEManagerBluetoothService
 
   public async disconnect(device: Device<Peripheral>): Promise<void> {
     await BleManager.disconnect(device.id);
+  }
+
+  public async send(
+    command: string,
+    device: Device<Peripheral>,
+  ): Promise<void> {
+    log.info('--BLE: SEND');
+
+    throw new Error('Method not implement');
   }
 
   private async read(device: Device<Peripheral>): Promise<void> {

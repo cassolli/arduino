@@ -1,14 +1,14 @@
-import React, {useCallback} from 'react';
+import React, {useContext, useState} from 'react';
 import {
   GestureResponderEvent,
   StyleSheet,
-  TouchableHighlight,
   TouchableOpacity,
   Vibration,
   View,
   ViewStyle,
 } from 'react-native';
-import {log} from './lib/log';
+import {log} from '../lib/log';
+import {BluetoothContext} from './BluetoothContext';
 
 type ControllerProps = {
   style?: ViewStyle;
@@ -19,44 +19,66 @@ type ControllerButtonProps = {
   title?: string;
   onPress?: () => void;
   onLongPress?: () => void;
+  onPressHold?: () => void;
 };
 
+const COMMAND_DELAY = 350;
+
 const ControllerButton: React.FC<ControllerButtonProps> = props => {
-  const startVibration = (event: GestureResponderEvent) => {
-    Vibration.vibrate([30, 30], true);
+  const [pressHoldInterval, setPressHoldInterval] = useState<
+    NodeJS.Timer | undefined
+  >(undefined);
+
+  const onPressIn = (event: GestureResponderEvent) => {
+    event.persist();
+
     log.debug('--startVibration');
     log.debug(event);
+    log.debug(pressHoldInterval);
+
+    Vibration.vibrate([30, 30], true);
+
+    if (props?.onPressHold) {
+      props.onPressHold();
+
+      setPressHoldInterval(setInterval(props.onPressHold, COMMAND_DELAY));
+    }
   };
 
-  const cancelVibration = (event: GestureResponderEvent) => {
-    Vibration.cancel();
+  const onPressOut = (event: GestureResponderEvent) => {
+    event.persist();
+
     log.debug('--cancelVibration');
     log.debug(event);
-  };
 
-  const onPress = () => {
-    if (props?.onPress) props.onPress();
-  };
+    Vibration.cancel();
 
-  const onLongPress = () => {
-    if (props?.onLongPress) props.onLongPress();
+    if (props?.onPressHold) {
+      clearInterval(pressHoldInterval);
+    }
   };
 
   return (
     <TouchableOpacity
-      onPress={onPress}
-      onLongPress={onLongPress}
-      onPressIn={startVibration}
-      onPressOut={cancelVibration}>
+      onPress={props.onPress}
+      onLongPress={props.onLongPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}>
       <View
         style={{
           ...style.controllerButtonContainer,
           ...(props?.style ?? {}),
-        }}></View>
+        }}
+      />
     </TouchableOpacity>
   );
 };
 const Controller: React.FC<ControllerProps> = props => {
+  const context = useContext(BluetoothContext);
+
+  const sendCommand = (command: string) =>
+    context?.state?.service.send(command, context?.state.device);
+
   return (
     <View style={{...style.container, ...(props?.style ?? {})}}>
       <View style={style.containerButtonsLeft}>
@@ -65,12 +87,14 @@ const Controller: React.FC<ControllerProps> = props => {
           style={style.controllerButtonLeft}
           onPress={() => log.info('- Left')}
           onLongPress={() => log.info('- Long Left')}
+          onPressHold={() => sendCommand('E')}
         />
         <ControllerButton
           title="Button Right"
           style={style.controllerButtonRight}
           onPress={() => log.info('- Right')}
           onLongPress={() => log.info('- Long Right')}
+          onPressHold={() => sendCommand('D')}
         />
       </View>
 
@@ -80,12 +104,14 @@ const Controller: React.FC<ControllerProps> = props => {
           style={style.controllerButtonTop}
           onPress={() => log.info('- Top')}
           onLongPress={() => log.info('- Long Top')}
+          onPressHold={() => sendCommand('F')}
         />
         <ControllerButton
           title="Button Bottom"
           style={style.controllerButtonBottom}
           onPress={() => log.info('- Bottom')}
           onLongPress={() => log.info('- Long Bottom')}
+          onPressHold={() => sendCommand('T')}
         />
       </View>
     </View>

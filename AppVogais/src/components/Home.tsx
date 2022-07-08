@@ -6,7 +6,7 @@ import Screen from './Screen';
 const Home = () => {
   return (
     <View style={style.container}>
-      <Screen style={style.screen} text="_E_I_U" />
+      <Screen style={style.screen} text="_E_O_" />
 
       <Controller style={style.controller} />
     </View>

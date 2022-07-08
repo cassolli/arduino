@@ -12,6 +12,8 @@ import {Device} from '../domain/device';
 export class ClassicBluetoothService
   implements BluetoothService<BluetoothDevice>
 {
+  connected: boolean = false;
+
   protected enabledSubscription: any;
 
   public async init() {
@@ -62,6 +64,15 @@ export class ClassicBluetoothService
     }
 
     await this.read(device);
+  }
+
+  public async send(
+    command: string,
+    device: Device<BluetoothDevice>,
+  ): Promise<void> {
+    log.info('--RNBluetoothClassic: SEND');
+
+    await device.origem.write(command);
   }
 
   private async read(device: Device<BluetoothDevice>): Promise<void> {

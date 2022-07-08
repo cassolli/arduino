@@ -10,79 +10,25 @@
 
 import React, {useEffect, useState} from 'react';
 import {
-  Button,
+  Dimensions,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
-  ToastAndroid,
-  TouchableOpacity,
   useColorScheme,
   View,
+  ViewStyle,
 } from 'react-native';
-import {Peripheral} from 'react-native-ble-manager';
-import {BluetoothDevice} from 'react-native-bluetooth-classic';
-import BluetoothSerial, {
-  AndroidBluetoothDevice,
-} from 'react-native-bluetooth-serial-next';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
-import {BLEManagerBluetoothService} from './common/application/ble-manager-bluetooth.service';
-import {ClassicBluetoothService} from './common/application/classic-bluetooth.service';
-import {SerialBluetoothService} from './common/application/serial-bluetooth.service';
-import {Device} from './common/domain/device';
-import Home from './Home';
+import {BluetoothState} from './common/domain/bluetooth.state';
+import {BluetoothContext} from './components/BluetoothContext';
+import BluetoothManager from './components/BluetoothManager';
+import Controller from './components/Controller';
+import Screen from './components/Screen';
 import {log} from './lib/log';
 
-const Section: React.FC<{
-  title: string;
-}> = ({children, title}) => {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-};
-
-const classicBluetoothService = new ClassicBluetoothService();
-const bleManagerBluetoothService = new BLEManagerBluetoothService();
-const serialBluetoothService = new SerialBluetoothService();
-
-enum LIBS {
-  CLASSIC,
-  BLE,
-  SERIAL,
-}
-
 const App = () => {
-  useEffect(() => {
-    classicBluetoothService.init();
-    bleManagerBluetoothService.init();
-
-    classicBluetoothService.onDeviceConnected();
-    bleManagerBluetoothService.onDeviceConnected();
-
-    log.info('--BluetoothSerial');
-    log.debug(BluetoothSerial);
-  }, []);
+  useEffect(() => {}, []);
 
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -90,227 +36,55 @@ const App = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  const [currentLib, setCurrentLib] = useState(LIBS.CLASSIC);
+  const [state, setState] = useState<BluetoothState<any> | undefined>(
+    undefined,
+  );
 
-  const [listDevices, setListDevices] = useState<
-    Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>[]
-  >([]);
+  const changeBluetoothState = (newState: BluetoothState<any>): void => {
+    log.info('-- ATUALIAR ESTADO');
+    log.debug(newState);
 
-  const [currentDevice, setCurrentDevice] =
-    useState<Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>>();
-
-  const onPress = (
-    device: Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>,
-  ) => {
-    log.info('--onPress device');
-    log.debug(device);
-
-    switch (currentLib) {
-      case LIBS.BLE:
-        bleManagerBluetoothService.connect(device as Device<Peripheral>);
-        break;
-      case LIBS.SERIAL:
-        serialBluetoothService.connect(
-          device as Device<AndroidBluetoothDevice>,
-        );
-        break;
-      default:
-        classicBluetoothService.connect(device as Device<BluetoothDevice>);
-        break;
-    }
-
-    setCurrentDevice(device);
-
-    ToastAndroid.show(`CONNECTED: ${device.id}`, ToastAndroid.SHORT);
-  };
-
-  const onLongPress = (
-    device: Device<BluetoothDevice | Peripheral | AndroidBluetoothDevice>,
-  ) => {
-    log.info('--onLongPress device');
-    log.debug(device);
-
-    switch (currentLib) {
-      case LIBS.BLE:
-        bleManagerBluetoothService.disconnect(device as Device<Peripheral>);
-        break;
-      case LIBS.SERIAL:
-        serialBluetoothService.disconnect(
-          device as Device<AndroidBluetoothDevice>,
-        );
-        break;
-      default:
-        // classicBluetoothService.disconnect(device as Device<BluetoothDevice>);
-        break;
-    }
-
-    setCurrentDevice(undefined);
-
-    ToastAndroid.show(`DISCONNECTED: ${device.id}`, ToastAndroid.SHORT);
-  };
-
-  const onPressSendMessage = async () => {
-    log.info('--onPress onPressSendMessage');
-    log.debug(currentDevice);
-
-    switch (currentLib) {
-      case LIBS.BLE:
-        bleManagerBluetoothService.connect(currentDevice as Device<Peripheral>);
-        break;
-      case LIBS.SERIAL:
-        await serialBluetoothService.write(
-          currentDevice as Device<AndroidBluetoothDevice>,
-          '6',
-        );
-        break;
-      default:
-        classicBluetoothService.connect(
-          currentDevice as Device<BluetoothDevice>,
-        );
-        break;
-    }
-
-    ToastAndroid.show(`SEND MESSAGE: ${currentDevice?.id}`, ToastAndroid.SHORT);
+    setState(newState);
   };
 
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
-      {/* <Home /> */}
+      <BluetoothContext.Provider
+        value={{state, setState: changeBluetoothState}}>
+        <BluetoothManager />
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        {/* <Header /> */}
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          style={backgroundStyle}>
+          <View style={style.container}>
+            <Screen style={style.screen} text="_E_O_" />
 
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Classic">
-            <Button
-              title="Carregar dispositivos"
-              onPress={async () => {
-                setCurrentLib(LIBS.CLASSIC);
-
-                setListDevices(await classicBluetoothService.getDevices());
-              }}
-            />
-
-            <Button
-              title="Carregar dispositivos conectados"
-              onPress={async () => {
-                setCurrentLib(LIBS.CLASSIC);
-
-                setListDevices(
-                  await classicBluetoothService.getConnectedDevices(),
-                );
-              }}
-            />
-          </Section>
-
-          <Section title="BLE">
-            <Button
-              title="Carregar dispositivos"
-              color={'green'}
-              onPress={async () => {
-                setCurrentLib(LIBS.BLE);
-
-                setListDevices(await bleManagerBluetoothService.getDevices());
-              }}
-            />
-
-            <Button
-              title="Carregar dispositivos conectados"
-              color={'green'}
-              onPress={async () => {
-                setCurrentLib(LIBS.BLE);
-
-                setListDevices(
-                  await bleManagerBluetoothService.getConnectedDevices(),
-                );
-              }}
-            />
-          </Section>
-
-          <Section title="Serial">
-            <Button
-              title="Carregar dispositivos"
-              color={'green'}
-              onPress={async () => {
-                setCurrentLib(LIBS.SERIAL);
-
-                setListDevices(await serialBluetoothService.getDevices());
-              }}
-            />
-
-            <Button
-              title="Carregar dispositivos conectados"
-              color={'green'}
-              onPress={async () => {
-                setCurrentLib(LIBS.SERIAL);
-
-                setListDevices(
-                  await serialBluetoothService.getConnectedDevices(),
-                );
-              }}
-            />
-
-            <Button
-              title="Enviar comando"
-              color={'green'}
-              onPress={onPressSendMessage}
-            />
-          </Section>
-
-          <Section title="Listar dispositivos">
-            <ScrollView>
-              {listDevices.map((device, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => onPress(device)}
-                  onLongPress={() => onLongPress(device)}>
-                  <View style={styles.deviceItem}>
-                    <Text>{`Nome: ${device.name}`}</Text>
-                    <Text>{`ID: ${device.id}`}</Text>
-                    <Text>{`Endereço: ${device.address}`}</Text>
-                    <Text>{`Vinculado: ${
-                      device.bonded ? 'TRUE' : 'FALSE'
-                    }`}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Section>
-        </View>
-      </ScrollView>
+            <Controller style={style.controller} />
+          </View>
+        </ScrollView>
+      </BluetoothContext.Provider>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  deviceItem: {
-    marginHorizontal: 8,
-    marginVertical: 16,
-    paddingHorizontal: 8,
-  },
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
+const style = StyleSheet.create({
+  container: {
+    backgroundColor: '#eaeaea',
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    paddingHorizontal: 16,
+    paddingVertical: 32,
+    zIndex: 1,
+    alignItems: 'center',
+  } as ViewStyle,
+
+  screen: {} as ViewStyle,
+
+  controller: {
+    marginTop: 72,
+  } as ViewStyle,
 });
 
 export default App;
