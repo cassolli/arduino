@@ -3,7 +3,7 @@ import BluetoothSerial, {
   AndroidBluetoothDevice,
 } from 'react-native-bluetooth-serial-next';
 import {log} from '../../lib/log';
-import {BluetoothService} from '../domain/bluetooth.service';
+import {BluetoothService, CallbackOnRead} from '../domain/bluetooth.service';
 import {Device} from '../domain/device';
 
 type BluetoothSerialEventData = {
@@ -16,6 +16,8 @@ export class SerialBluetoothService
   implements BluetoothService<AndroidBluetoothDevice>
 {
   connected: boolean = false;
+
+  private callbackOnRead: CallbackOnRead | undefined = undefined;
 
   public async init(): Promise<void> {
     try {
@@ -52,10 +54,14 @@ export class SerialBluetoothService
 
           BluetoothSerial.readEvery(
             async (everyData: string, readEveryIntervalId: number) => {
-              log.info('--SerialBluetoothService: READ_EVERY');
+              // log.info('--SerialBluetoothService: READ_EVERY');
 
-              log.debug(everyData);
-              log.debug(await BluetoothSerial.readFromDevice());
+              const dataFromDevice = await BluetoothSerial.readFromDevice();
+              // log.info('--SerialBluetoothService: DATA - ' + dataFromDevice);
+
+              if (this.callbackOnRead && dataFromDevice) {
+                this.callbackOnRead(dataFromDevice);
+              }
 
               BluetoothSerial.on('connectionLost', () => {
                 clearInterval(readEveryIntervalId);
@@ -210,6 +216,10 @@ export class SerialBluetoothService
     log.debug(command);
 
     await BluetoothSerial.write(command, device.id);
+  }
+
+  public onRead(callback: CallbackOnRead): void {
+    this.callbackOnRead = callback;
   }
 
   private async read(device: Device<AndroidBluetoothDevice>): Promise<void> {

@@ -8,7 +8,7 @@
  * @format
  */
 
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   Dimensions,
   SafeAreaView,
@@ -28,10 +28,9 @@ import Screen from './components/Screen';
 import {log} from './lib/log';
 
 const App = () => {
-  useEffect(() => {}, []);
+  const targetText = 'AEIOU';
 
   const isDarkMode = useColorScheme() === 'dark';
-
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
@@ -40,11 +39,40 @@ const App = () => {
     undefined,
   );
 
-  const changeBluetoothState = (newState: BluetoothState<any>): void => {
-    log.info('-- ATUALIAR ESTADO');
-    log.debug(newState);
+  const [currentText, setCurrentText] = useState<string>('');
 
-    setState(newState);
+  console.log('--currentText');
+  console.log(currentText);
+
+  const changeBluetoothState = useCallback(
+    (newState: BluetoothState<any>): void => {
+      log.info('-- ATUALIAR ESTADO');
+      log.debug(newState);
+
+      newState.service.onRead((data: string) => {
+        console.log('-- onRead');
+        console.log(data);
+        console.log(currentText);
+
+        if (!data.includes('letra: ')) {
+          return;
+        }
+
+        setCurrentText(prevText => prevText + data.replace('letra: ', ''));
+      });
+
+      setState(newState);
+    },
+    [currentText],
+  );
+
+  const getMaskText = (): string => {
+    return targetText
+      .split('')
+      .map(targetCharacter =>
+        currentText.includes(targetCharacter) ? targetCharacter : '_',
+      )
+      .join('');
   };
 
   return (
@@ -59,7 +87,7 @@ const App = () => {
           contentInsetAdjustmentBehavior="automatic"
           style={backgroundStyle}>
           <View style={style.container}>
-            <Screen style={style.screen} text="_E_O_" />
+            <Screen style={style.screen} text={getMaskText()} />
 
             <Controller style={style.controller} />
           </View>

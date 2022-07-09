@@ -42,6 +42,37 @@ void moverRobo(int frente_direita = LOW, int frente_esquerda = LOW, int tras_dir
   analogWrite(DIRECAO_TRAS_ESQUERDA_PIN, tras_esquerda);
 }
 
+void enviarLetraLida(String id_dispositivo) {
+  id_dispositivo.toUpperCase();
+
+  if (id_dispositivo.indexOf("33:A2:CC:06") >= 0) {
+    BLUETOOTH.write("letra: A");
+    return;
+  }
+  
+  if (id_dispositivo.indexOf("49:E7:7D:39") >= 0) {
+    BLUETOOTH.write("letra: E");
+    return;
+  }
+  
+  if (id_dispositivo.indexOf("A3:C7:4B:A7") >= 0) {
+    BLUETOOTH.write("letra: I");
+    return;
+  }
+
+  if (id_dispositivo.indexOf("0C:9D:51:C3") >= 0) {
+    BLUETOOTH.write("letra: O");
+    return;
+  }
+
+  if (id_dispositivo.indexOf("0C:C5:4D:49") >= 0) {
+    BLUETOOTH.write("letra: U");
+    return;
+  }
+  
+  BLUETOOTH.write("CARTÃO NÃO CADASTRADO\n");
+}
+
 void setup() {
   // RFID
   Wire.begin();
@@ -62,35 +93,11 @@ void setup() {
   moverRobo();
 }
 
-void enviarBluetooth() {
-  if (!Serial.available())
-    return;
-
-  unsigned long tempo_caracter_atual = millis();
-  texto_recebido += Serial.read();
-
-  if ((tempo_caracter_atual - tempo_ultimo_caracter) > 10 && texto_recebido != "") {
-    BLUETOOTH.println(texto_recebido);
-    texto_recebido = "";
-  }
-
-  tempo_ultimo_caracter = tempo_caracter_atual;
-}
-
 void lerBluetooth() {
   if (!BLUETOOTH.available())
     return;
 
   char caracter = BLUETOOTH.read();
-
-  if (strcmp(caracter, '6') || caracter == 6 || caracter == '6') {
-    Serial.print("== PODE ESCREVER\n");
-    // BLUETOOTH.write("2");
-    BLUETOOTH.println("Teste 12");
-  }
-
-  Serial.print("== CARACTER:  ");
-  Serial.print(caracter);
 
   switch (toupper(caracter)) {
     case 'F':  // ANDAR PRA FRENTE
@@ -116,7 +123,7 @@ void lerBluetooth() {
   Serial.println(caracter);
 }
 
-void lerRFID() {
+void lerRFID() {  
   if (!RFID.PICC_IsNewCardPresent() || !RFID.PICC_ReadCardSerial())
     return;
 
@@ -130,19 +137,7 @@ void lerRFID() {
   }
   id_dispositivo.toUpperCase();
 
-  if (id_dispositivo.indexOf("01:4F:77:89") >= 0) {
-    BLUETOOTH.write("ACHEI A\n");
-  } else if (id_dispositivo.indexOf("43:81:5C:A") >= 0) {
-    BLUETOOTH.write("ACHEI E\n");
-  } else if (id_dispositivo.indexOf("33:A2:CC:06") >= 0) {
-    BLUETOOTH.write("ACHEI I\n");
-  } else if (id_dispositivo.indexOf("49:E7:7D:39") >= 0) {
-    BLUETOOTH.write("ACHEI O\n");
-  } else if (id_dispositivo.indexOf("A3:C7:4B:A7") >= 0) {
-    BLUETOOTH.write("ACHEI U\n");
-  } else {
-    BLUETOOTH.write("CARTÃO NÃO CADASTRADO\n");
-  }
+  enviarLetraLida(id_dispositivo);
 
   RFID.PICC_HaltA();       // Parar de ler o cartao
   RFID.PCD_StopCrypto1();  // parada da criptografia no pcd
@@ -150,6 +145,5 @@ void lerRFID() {
 
 void loop() {
   lerRFID();
-  enviarBluetooth();
   lerBluetooth();
 }
